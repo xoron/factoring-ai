@@ -9,6 +9,8 @@
     "start": "parcel ./src/index.html"
   },
   "dependencies": {
+    "@tensorflow/tfjs": "^1.6.0",
+    "@tensorflow/tfjs-vis": "^1.4.0",
     "parcel-bundler": "^1.12.4"
   }
 }
