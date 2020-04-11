@@ -145,22 +145,12 @@ function trainModel(model, inputs, labels) {
   
   const batchSize = 100;
   const epochs = 100;
-
-  debugger;
   
   return model.fit(inputs, labels, {
     batchSize,
     epochs,
-    shuffle: true,
-    callbacks: (val) => {
-      console.log('val', val);
-      return tfvis.show.fitCallbacks(
-        { name: 'Training Performance' },
-        ['loss', 'mse'], 
-        { height: 200, callbacks: ['onEpochEnd'] }
-      );
-    }
-  });
+    shuffle: true
+  }).then((info) => console.log('training finished', info));
 }
     
 // Train the model  
@@ -173,7 +163,6 @@ trainModel(model, inputs, labels)
     })
 
 function testModel(model, inputData, normalizationData) {
-  debugger;
   const {inputMax, inputMin, labelMin, labelMax} = normalizationData;
   
   // Generate predictions for a uniform range of numbers between 0 and 1;
@@ -181,8 +170,7 @@ function testModel(model, inputData, normalizationData) {
   // that we did earlier.
   const [xs, preds] = tf.tidy(() => {
     
-    const xs = tf.linspace(0, 11, 1);
-    console.log('xs', xs);
+    const xs = tf.linspace(0, 11, 11);
     const preds = model.predict(xs.reshape([1, 11]));      
     
     const unNormXs = xs
@@ -199,14 +187,23 @@ function testModel(model, inputData, normalizationData) {
   
  
   const predictedPoints = Array.from(xs).map((val, i) => {
-    return {x: val, y: preds[i]}
+    console.log('predicting val', val, preds[i]);
+    return {x: (val), y: preds[i]}
   });
   
-  const originalPoints = inputData.map(({ DaysLate, ...rest }) => ({
-    x: convertToFeatureVector(rest),
-    y: d.DaysLate,
-  }));
-  
+  const originalPoints = inputData.map(({ DaysLate, ...rest }) => {
+    // const tf2 = tf;
+    // console.log('-----rest', rest);
+    // console.log('convertToFeatureVector(rest)', convertToFeatureVector(rest));
+    // console.log('prediction',  model.predict(tf2.tensor(convertToFeatureVector(rest), [1, 11])).print());
+   
+    return ({
+      x: convertToFeatureVector(rest),
+      y: DaysLate,
+      prediction: model.predict(tf.tensor(convertToFeatureVector(rest), [1, 11])).print()
+    });
+  });
+  debugger;
   
   tfvis.render.scatterplot(
     {name: 'Model Predictions vs Original Data'}, 
