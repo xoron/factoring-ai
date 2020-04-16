@@ -108,22 +108,22 @@ function convertToTensor(data) {
     const labelTensor = tf.tensor2d(labels, [labels.length, 1]);
 
     //Step 3. Normalize the data to the range 0 - 1 using min-max scaling
-    const inputMax = inputTensor.max();
-    const inputMin = inputTensor.min();  
-    const labelMax = labelTensor.max();
-    const labelMin = labelTensor.min();
+    // const inputMax = inputTensor.max();
+    // const inputMin = inputTensor.min();  
+    // const labelMax = labelTensor.max();
+    // const labelMin = labelTensor.min();
 
-    const normalizedInputs = inputTensor.sub(inputMin).div(inputMax.sub(inputMin));
-    const normalizedLabels = labelTensor.sub(labelMin).div(labelMax.sub(labelMin));
+    // const normalizedInputs = inputTensor.sub(inputMin).div(inputMax.sub(inputMin));
+    // const normalizedLabels = labelTensor.sub(labelMin).div(labelMax.sub(labelMin));
 
     return {
-      inputs: normalizedInputs,
-      labels: normalizedLabels,
+      inputs: inputTensor,
+      labels: labelTensor,
       // Return the min/max bounds so we can use them later.
-      inputMax,
-      inputMin,
-      labelMax,
-      labelMin,
+      // inputMax,
+      // inputMin,
+      // labelMax,
+      // labelMin,
     }
   });  
 }
@@ -145,6 +145,11 @@ function trainModel(model, inputs, labels) {
   
   const batchSize = 100;
   const epochs = 100;
+
+  console.log({
+    inputs,
+    labels
+  });
   
   return model.fit(inputs, labels, {
     batchSize,
@@ -163,33 +168,33 @@ trainModel(model, inputs, labels)
     })
 
 function testModel(model, inputData, normalizationData) {
-  const {inputMax, inputMin, labelMin, labelMax} = normalizationData;
+  // const {inputMax, inputMin, labelMin, labelMax} = normalizationData;
   
-  // Generate predictions for a uniform range of numbers between 0 and 1;
-  // We un-normalize the data by doing the inverse of the min-max scaling 
-  // that we did earlier.
-  const [xs, preds] = tf.tidy(() => {
+  // // Generate predictions for a uniform range of numbers between 0 and 1;
+  // // We un-normalize the data by doing the inverse of the min-max scaling 
+  // // that we did earlier.
+  // const [xs, preds] = tf.tidy(() => {
     
-    const xs = tf.linspace(0, 11, 11);
-    const preds = model.predict(xs.reshape([1, 11]));      
+  //   const xs = tf.linspace(0, 11, 11);
+  //   const preds = model.predict(xs.reshape([1, 11]));      
     
-    const unNormXs = xs
-      .mul(inputMax.sub(inputMin))
-      .add(inputMin);
+  //   const unNormXs = xs
+  //     .mul(inputMax.sub(inputMin))
+  //     .add(inputMin);
     
-    const unNormPreds = preds
-      .mul(labelMax.sub(labelMin))
-      .add(labelMin);
+  //   const unNormPreds = preds
+  //     .mul(labelMax.sub(labelMin))
+  //     .add(labelMin);
     
-    // Un-normalize the data
-    return [unNormXs.dataSync(), unNormPreds.dataSync()];
-  });
+  //   // Un-normalize the data
+  //   return [unNormXs.dataSync(), unNormPreds.dataSync()];
+  // });
   
  
-  const predictedPoints = Array.from(xs).map((val, i) => {
-    console.log('predicting val', val, preds[i]);
-    return {x: (val), y: preds[i]}
-  });
+  // const predictedPoints = Array.from(xs).map((val, i) => {
+  //   console.log('predicting val', val, preds[i]);
+  //   return {x: (val), y: preds[i]}
+  // });
   
   const originalPoints = inputData.map(({ DaysLate, ...rest }) => {
     // const tf2 = tf;
@@ -200,14 +205,14 @@ function testModel(model, inputData, normalizationData) {
     return ({
       x: convertToFeatureVector(rest),
       y: DaysLate,
-      prediction: model.predict(tf.tensor(convertToFeatureVector(rest), [1, 11])).print()
+      prediction: model.predict(tf.tensor(convertToFeatureVector(rest), [1, 11]))
     });
   });
   debugger;
   
   tfvis.render.scatterplot(
     {name: 'Model Predictions vs Original Data'}, 
-    {values: [originalPoints, predictedPoints], series: ['original', 'predicted']}, 
+    {values: [originalPoints.map(({ x, y }) => ({ x, y })), originalPoints.map(({ x, prediction }) => ({ x, y: prediction }))], series: ['original', 'predicted']}, 
     {
       xLabel: 'rest',
       yLabel: 'DaysLate',
