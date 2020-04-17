@@ -34,15 +34,16 @@ const convertToFeatureVector = (
     (new Date(features['SettledDate']).getTime()),
     uniquePaperlessBill.indexOf(features['PaperlessBill']),
     features['DaysToSettle'],
+    features['DaysLate']
   ];
 }
 
 const values = factoringData.map(({
-  DaysLate: daysLate,
+  DaysLate,
   ...rest
 }) => ({
-    x: convertToFeatureVector(rest),
-    y: daysLate
+    x: convertToFeatureVector({ ...rest, DaysLate }),
+    y: DaysLate
 }));
 
 console.log('values', values)
@@ -63,11 +64,12 @@ tfvis.render.scatterplot(
 const model = tf.sequential(); 
   
 // Add a single input layer
-model.add(tf.layers.dense({ units: 32, inputShape: [11], useBias: true, activation: 'relu'}));
+model.add(tf.layers.dense({ units: 32, inputShape: [12], useBias: true, activation: 'relu'}));
 
 // Add a few hidden layers
 model.add(tf.layers.dense({ units: 128, activation: 'relu'}));
 model.add(tf.layers.dense({ units: 1024, activation: 'relu'}));
+model.add(tf.layers.dense({ units: 512, activation: 'relu'}));
 model.add(tf.layers.dense({ units: 256, activation: 'relu'}));
 model.add(tf.layers.dense({ units: 64, activation: 'relu'}));
 
@@ -96,7 +98,7 @@ function convertToTensor(data) {
     const formattedData = data.map(({ DaysLate, ...input}) => {
       
       return ({
-          input: convertToFeatureVector(input),
+          input: convertToFeatureVector({ ...input, DaysLate}),
           label: DaysLate
       });
     });
@@ -104,7 +106,7 @@ function convertToTensor(data) {
     const inputs = formattedData.map(d => d.input);
     const labels = formattedData.map(d => d.label);
 
-    const inputTensor = tf.tensor2d(inputs, [inputs.length, 11]);
+    const inputTensor = tf.tensor2d(inputs, [inputs.length, 12]);
     const labelTensor = tf.tensor2d(labels, [labels.length, 1]);
 
     //Step 3. Normalize the data to the range 0 - 1 using min-max scaling
@@ -131,20 +133,21 @@ function convertToTensor(data) {
 // Convert the data to a form we can use for training.
 const tensorData = convertToTensor(factoringData);
 const {inputs, labels} = tensorData;
+console.log(inputs[1])
 console.log('tensor created', inputs);
 
 function trainModel(model, inputs, labels) {
   // Prepare the model for training.  
   model.compile({
-    optimizer: tf.train.adam(),
+    optimizer: tf.train.adam(0.01),
     loss: tf.losses.meanSquaredError,
     metrics: ['mse'],
   });
 
   console.log('compiled model');
   
-  const batchSize = 100;
-  const epochs = 100;
+  const batchSize = 264;
+  const epochs = 500;
 
   console.log({
     inputs,
@@ -203,9 +206,9 @@ function testModel(model, inputData, normalizationData) {
     // console.log('prediction',  model.predict(tf2.tensor(convertToFeatureVector(rest), [1, 11])).print());
    
     return ({
-      x: convertToFeatureVector(rest),
+      x: convertToFeatureVector({ ...rest, DaysLate }),
       y: DaysLate,
-      prediction: model.predict(tf.tensor(convertToFeatureVector(rest), [1, 11]))
+      prediction: model.predict(tf.tensor(convertToFeatureVector({ ...rest, DaysLate }), [1, 12])).dataSync()
     });
   });
   debugger;
